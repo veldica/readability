@@ -15,6 +15,12 @@ import { validateMetrics } from "./utils.js";
 export * from "./formulas.js";
 export * from "./utils.js";
 export * from "./types.js";
+export * from "./analyzer.js";
+
+/**
+ * The official Dale-Chall 3,000 "easy word" list used by the Dale-Chall formula.
+ * Exported as a Set for O(1) lookup performance during custom analysis.
+ */
 export { DALE_CHALL_EASY_WORDS } from "./data/daleChall.js";
 
 /**
@@ -69,10 +75,19 @@ export function runAllFormulas(stats: StructuralMetrics): AnalysisResults {
 
   const consensus_grade = calculateConsensus(formulas);
   const readability_band = getReadabilityBand(consensus_grade);
+  const consensus_sources = formulas
+    .filter((f) => f.applicable && f.metric !== "flesch_reading_ease" && f.metric !== "type_token_ratio")
+    .map((f) => f.name);
+
+  const excluded_formulas = formulas
+    .filter((f) => !f.applicable || f.metric === "flesch_reading_ease" || f.metric === "type_token_ratio")
+    .map((f) => f.name);
 
   return {
     formulas,
     consensus_grade,
     readability_band,
+    consensus_sources,
+    excluded_formulas,
   };
 }

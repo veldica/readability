@@ -146,6 +146,8 @@ export interface AnalysisResults {
   formulas: FormulaResult[];
   consensus_grade: number;
   readability_band: string;
+  consensus_sources: string[];
+  excluded_formulas: string[];
 }
 
 export interface StructuralMetrics {
