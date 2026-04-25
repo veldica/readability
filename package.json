@@ -1,0 +1,76 @@
+{
+  "name": "@veldica/readability",
+  "version": "1.0.0",
+  "description": "Consolidated readability formulas for English text. High-precision, deterministic scores for Flesch-Kincaid, Dale-Chall, Gunning Fog, and more.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./formulas": {
+      "types": "./dist/formulas.d.ts",
+      "import": "./dist/formulas.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "readability",
+    "readability-formulas",
+    "flesch-kincaid",
+    "dale-chall",
+    "gunning-fog",
+    "smog",
+    "automated-readability-index",
+    "text-analysis",
+    "editorial-tooling",
+    "prose-metrics",
+    "nlp",
+    "deterministic"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Veldica",
+    "email": "opensource@veldica.com",
+    "url": "https://veldica.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/veldica/readability.git"
+  },
+  "bugs": {
+    "url": "https://github.com/veldica/readability/issues"
+  },
+  "homepage": "https://veldica.com/readability",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "syllable": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0"
+  }
+}
