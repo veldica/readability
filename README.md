@@ -11,7 +11,6 @@ Consolidated deterministic readability formulas for English prose. This library 
 - **Deterministic Rule-Based Logic**: Mathematical implementations that provide consistent, predictable scores.
 - **Consensus Grade Scoring**: Aggregated difficulty levels derived from multiple industry-standard formulas.
 - **Precision Hardened**: Comprehensive input validation to prevent `NaN` or `Infinity` errors in production.
-- **Agentic Ready**: Includes `GEMINI.md` for AI-assisted maintenance and integration.
 - **Ultra-Lightweight**: Only one tiny dependency (`syllable`) for high-performance execution.
 - **Tree-Shakable**: ESM-first design with modular exports for individual formulas.
 

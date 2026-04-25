@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - 2026-04-24
 
 ### Fixed
-- Corrected copyright holder in `LICENSE` from Antigravity to Veldica.
+- Corrected copyright holder in `LICENSE` from Veldica to Veldica.
 
 ## [1.1.0] - 2026-04-24
 
