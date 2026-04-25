@@ -1,7 +1,7 @@
 {
   "name": "@veldica/readability",
   "version": "1.0.0",
-  "description": "Deterministic readability formulas for English text. High-precision scoring for Flesch-Kincaid, Dale-Chall, Gunning Fog, and other industry standards.",
+  "description": "Easy-to-use readability scores for English text. Get fast, reliable results for Flesch-Kincaid, Dale-Chall, and other top formulas.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
