@@ -1,22 +1,24 @@
 import { countSyllables, safeDivide, round, calculateMedian } from "./utils.js";
 import { DALE_CHALL_EASY_WORDS } from "./data/daleChall.js";
+import { splitParagraphs, splitSentences, splitWords, getStructureCounts } from "@veldica/prose-tokenizer";
 import type { StructuralMetrics, SentenceDetail, ParagraphDetail } from "./types.js";
 
 /**
  * A robust analyzer that produces StructuralMetrics from raw text.
  * This serves as a "bridge" utility to quickly get readability scores.
  * 
- * Performance:
+ * Performance & Architecture:
+ * - Integrates @veldica/prose-tokenizer for high-precision, deterministic splitting.
  * - Uses O(N) Quickselect for median calculations.
- * - Uses an internal syllable cache to optimize throughput on large documents.
- * - Employs a more robust sentence splitter to handle basic abbreviations.
+ * - Uses an internal size-limited syllable cache to optimize throughput.
  */
 export function getStructuralMetrics(text: string): StructuralMetrics {
-  const paragraphsRaw = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  const paragraphs = splitParagraphs(text);
+  const structureCounts = getStructureCounts(text);
+  
   const paragraphDetails: ParagraphDetail[] = [];
   const sentenceDetails: SentenceDetail[] = [];
   
-  let totalWordCount = 0;
   let totalSyllableCount = 0;
   let totalPolysyllableCount = 0;
   let totalComplexWordCount = 0;
@@ -25,34 +27,23 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
   let totalLongWordCount = 0;
   const uniqueWordsMap = new Map<string, number>();
 
-  paragraphsRaw.forEach((pText, pIndex) => {
-    // A more robust split that handles some common abbreviations and decimals
-    // while avoiding catastrophic backtracking lookbehinds where possible.
-    const sentencesRaw = pText
-      .replace(/([A-Z])\.([A-Z])\./g, "$1__DOT__$2__DOT__") // Handle U.S.
-      .replace(/([A-Z])\.([A-Z])\.([A-Z])\./g, "$1__DOT__$2__DOT__$3__DOT__") // Handle U.S.A.
-      .replace(/(\d)\.(\d)/g, "$1__DEC__$2")   // Handle 3.14
-      .split(/(?<=[.!?])\s+/)
-      .map(s => s.replace(/__DOT__/g, ".").replace(/__DEC__/g, "."))
-      .filter(s => s.trim().length > 0);
-
+  paragraphs.forEach((pText, pIndex) => {
+    const sentences = splitSentences(pText);
     let pWordCount = 0;
-
-    sentencesRaw.forEach((sText) => {
-      const words = sText.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, "")).filter(w => w.length > 0);
-      
-      let sWordCount = 0;
+    
+    sentences.forEach((sText) => {
+      const words = splitWords(sText);
       let sSyllableCount = 0;
       let sComplexWordCount = 0;
       let sDifficultWordCount = 0;
 
-      words.forEach(word => {
-        const lowerWord = word.toLowerCase();
-        const syllables = countSyllables(word);
+      words.forEach(wordStr => {
+        const lowerWord = wordStr.toLowerCase();
+        const syllables = countSyllables(wordStr);
         
-        sWordCount++;
+        pWordCount++;
         sSyllableCount += syllables;
-        totalLetterCount += word.length;
+        totalLetterCount += wordStr.length;
         
         uniqueWordsMap.set(lowerWord, (uniqueWordsMap.get(lowerWord) || 0) + 1);
 
@@ -62,7 +53,7 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
           totalComplexWordCount++;
         }
 
-        if (word.length >= 7) {
+        if (wordStr.length >= 7) {
           totalLongWordCount++;
         }
 
@@ -75,14 +66,12 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
       sentenceDetails.push({
         index: sentenceDetails.length,
         text: sText,
-        word_count: sWordCount,
+        word_count: words.length,
         syllable_count: sSyllableCount,
         complex_word_count: sComplexWordCount,
         difficult_word_count: sDifficultWordCount
       });
 
-      pWordCount += sWordCount;
-      totalWordCount += sWordCount;
       totalSyllableCount += sSyllableCount;
     });
 
@@ -90,11 +79,11 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
       index: pIndex,
       text: pText,
       word_count: pWordCount,
-      sentence_count: sentencesRaw.length
+      sentence_count: sentences.length
     });
   });
 
-  const wordCount = totalWordCount;
+  const wordCount = structureCounts.word_count;
   const sentenceCount = sentenceDetails.length;
   const paragraphCount = paragraphDetails.length;
 
@@ -112,11 +101,11 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
       unique_word_count: uniqueWordsMap.size,
       sentence_count: sentenceCount,
       paragraph_count: paragraphCount,
-      heading_count: 0,
-      list_item_count: 0,
-      character_count: text.length,
-      character_count_no_spaces: text.replace(/\s/g, "").length,
-      letter_count: totalLetterCount,
+      heading_count: structureCounts.heading_count,
+      list_item_count: structureCounts.list_item_count,
+      character_count: structureCounts.character_count,
+      character_count_no_spaces: structureCounts.character_count_no_spaces,
+      letter_count: structureCounts.letter_count,
       syllable_count: totalSyllableCount,
       polysyllable_count: totalPolysyllableCount,
       complex_word_count: totalComplexWordCount,
@@ -166,20 +155,20 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
       unique_word_count: uniqueWordsMap.size,
       repetition_ratio: round(1 - safeDivide(uniqueWordsMap.size, wordCount), 4),
       top_repeated_words: topRepeatedWords,
-      avg_characters_per_word: round(safeDivide(totalLetterCount, wordCount)),
+      avg_characters_per_word: round(safeDivide(structureCounts.letter_count, wordCount)),
       avg_syllables_per_word: round(safeDivide(totalSyllableCount, wordCount)),
       long_word_ratio: round(safeDivide(totalLongWordCount, wordCount)),
       complex_word_ratio: round(safeDivide(totalComplexWordCount, wordCount)),
       difficult_word_ratio: round(safeDivide(totalDifficultWordCount, wordCount))
     },
     scannability: {
-      heading_density: 0,
-      words_per_heading: null,
-      list_density: 0,
-      words_between_breaks: wordCount,
+      heading_density: round(safeDivide(structureCounts.heading_count, wordCount), 4),
+      words_per_heading: structureCounts.heading_count > 0 ? round(safeDivide(wordCount, structureCounts.heading_count)) : null,
+      list_density: round(safeDivide(structureCounts.list_item_count, wordCount), 4),
+      words_between_breaks: round(safeDivide(wordCount, structureCounts.paragraph_count + structureCounts.heading_count + structureCounts.list_item_count)),
       wall_of_text_risk: paragraphWordCounts.some(c => c > 100) ? "high" : "low",
-      paragraph_scannability_score: 100,
-      sentence_tail_risk_score: 0
+      paragraph_scannability_score: 100, // Placeholder
+      sentence_tail_risk_score: 0 // Placeholder
     },
     sentences: sentenceDetails,
     paragraphs: paragraphDetails

@@ -34,10 +34,10 @@ export function validateMetrics(stats: StructuralMetrics): string[] {
 
 /**
  * SYLLABLE_CACHE is a simple Map to prevent redundant syllable calculations.
- * For high-throughput analysis of large documents, this prevents the event
- * loop from stalling on repetitive common words.
+ * Limited to 10,000 entries to prevent memory leaks in long-running processes.
  */
 const SYLLABLE_CACHE = new Map<string, number>();
+const MAX_CACHE_SIZE = 10000;
 
 /**
  * Deterministic syllable counting for English using a proven local package,
@@ -58,6 +58,12 @@ export function countSyllables(word: string): number {
     count = Math.max(1, syllable(normalized));
   }
 
+  // FIFO cache eviction to manage memory
+  if (SYLLABLE_CACHE.size >= MAX_CACHE_SIZE) {
+    const firstKey = SYLLABLE_CACHE.keys().next().value;
+    if (firstKey !== undefined) SYLLABLE_CACHE.delete(firstKey);
+  }
+
   SYLLABLE_CACHE.set(normalized, count);
   return count;
 }
@@ -72,11 +78,12 @@ export function clearSyllableCache(): void {
 /**
  * Implements the Quickselect algorithm to find the k-th smallest element.
  * Used for efficient O(N) median calculation.
+ * Uses a deterministic middle-pivot strategy.
  */
 function quickselect(arr: number[], k: number): number {
   if (arr.length === 1) return arr[0];
 
-  const pivot = arr[Math.floor(Math.random() * arr.length)];
+  const pivot = arr[Math.floor(arr.length / 2)];
   const lows = arr.filter(x => x < pivot);
   const highs = arr.filter(x => x > pivot);
   const pivots = arr.filter(x => x === pivot);

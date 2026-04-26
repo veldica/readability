@@ -7,9 +7,8 @@ test("getStructuralMetrics handles abbreviations and decimals correctly", () => 
   const text = "I live in the U.S.A. with 3.14 pies. This is another sentence.";
   const stats = getStructuralMetrics(text);
 
-  // Note: Simplified regex splitter might still split on the trailing dot of "U.S.A." if followed by space.
-  // "U.S.A. " -> split.
-  assert.strictEqual(stats.counts.sentence_count, 3);
+  // @veldica/prose-tokenizer handles U.S.A. and 3.14 without splitting.
+  assert.strictEqual(stats.counts.sentence_count, 2);
   assert.ok(stats.counts.word_count >= 11);
 });
 
