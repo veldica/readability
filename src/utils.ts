@@ -78,19 +78,45 @@ export function clearSyllableCache(): void {
 /**
  * Implements the Quickselect algorithm to find the k-th smallest element.
  * Used for efficient O(N) median calculation.
- * Uses a deterministic middle-pivot strategy.
+ * Iterative implementation to prevent stack overflow on large datasets.
  */
 function quickselect(arr: number[], k: number): number {
-  if (arr.length === 1) return arr[0];
+  let left = 0;
+  let right = arr.length - 1;
 
-  const pivot = arr[Math.floor(arr.length / 2)];
-  const lows = arr.filter(x => x < pivot);
-  const highs = arr.filter(x => x > pivot);
-  const pivots = arr.filter(x => x === pivot);
+  while (true) {
+    if (left === right) return arr[left];
 
-  if (k < lows.length) return quickselect(lows, k);
-  if (k < lows.length + pivots.length) return pivot;
-  return quickselect(highs, k - lows.length - pivots.length);
+    const pivotIndex = left + Math.floor((right - left) / 2);
+    const newPivotIndex = partition(arr, left, right, pivotIndex);
+
+    if (k === newPivotIndex) {
+      return arr[k];
+    } else if (k < newPivotIndex) {
+      right = newPivotIndex - 1;
+    } else {
+      left = newPivotIndex + 1;
+    }
+  }
+}
+
+/**
+ * Helper for Quickselect to partition the array.
+ */
+function partition(arr: number[], left: number, right: number, pivotIndex: number): number {
+  const pivotValue = arr[pivotIndex];
+  [arr[pivotIndex], arr[right]] = [arr[right], arr[pivotIndex]];
+  let storeIndex = left;
+
+  for (let i = left; i < right; i++) {
+    if (arr[i] < pivotValue) {
+      [arr[storeIndex], arr[i]] = [arr[i], arr[storeIndex]];
+      storeIndex++;
+    }
+  }
+
+  [arr[storeIndex], arr[right]] = [arr[right], arr[storeIndex]];
+  return storeIndex;
 }
 
 /**
