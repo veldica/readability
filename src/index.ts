@@ -53,6 +53,8 @@ export function getReadabilityBand(grade: number): string {
  * Executes all readability formulas against the provided metrics.
  * Performs validation before execution.
  * 
+ * Includes logic to cap extreme scores and flag anomalies in writing structure.
+ * 
  * @throws Error if metrics are invalid.
  */
 export function runAllFormulas(stats: StructuralMetrics): AnalysisResults {
@@ -61,7 +63,20 @@ export function runAllFormulas(stats: StructuralMetrics): AnalysisResults {
     throw new Error(`Invalid structural metrics: ${validationErrors.join(", ")}`);
   }
 
-  const formulas: FormulaResult[] = [
+  const warnings: string[] = [];
+  
+  // Anomaly detection
+  if (stats.lexical.avg_characters_per_word > 15) {
+    warnings.push("High character density detected; possibly contains non-standard tokens or technical data.");
+  }
+  if (stats.sentence_metrics.avg_words_per_sentence > 100) {
+    warnings.push("Extremely long sentences detected; results may be skewed.");
+  }
+  if (stats.counts.sentence_count === 1 && stats.counts.word_count > 50) {
+    warnings.push("Document lacks standard punctuation, causing high single-sentence word count.");
+  }
+
+  const rawFormulas: FormulaResult[] = [
     fleschReadingEase(stats),
     fleschKincaidGradeLevel(stats),
     gunningFog(stats),
@@ -72,6 +87,14 @@ export function runAllFormulas(stats: StructuralMetrics): AnalysisResults {
     linsearWrite(stats),
     typeTokenRatio(stats),
   ];
+
+  // Cap grade-level scores at 20 to prevent astronomical results from edge-case inputs.
+  const formulas = rawFormulas.map(f => {
+    if (f.metric !== "flesch_reading_ease" && f.metric !== "type_token_ratio" && f.score > 20) {
+      return { ...f, score: 20 };
+    }
+    return f;
+  });
 
   const consensus_grade = calculateConsensus(formulas);
   const readability_band = getReadabilityBand(consensus_grade);
@@ -89,5 +112,6 @@ export function runAllFormulas(stats: StructuralMetrics): AnalysisResults {
     readability_band,
     consensus_sources,
     excluded_formulas,
+    warnings,
   };
 }

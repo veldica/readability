@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-04-24
+
+### Added
+- `warnings` array in `AnalysisResults` to flag anomalous inputs (e.g., extreme word lengths).
+- $O(N)$ Quickselect algorithm for efficient median calculations on massive datasets.
+
+### Changed
+- Implemented internal `SYLLABLE_CACHE` to optimize throughput for repetitive common words.
+- Upgraded sentence splitter to handle basic abbreviations (U.S.A.) and decimals.
+- Capped grade-level scores at 20 to prevent astronomical results from edge-case inputs.
+
 ## [1.1.1] - 2026-04-24
 
 ### Fixed

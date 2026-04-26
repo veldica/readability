@@ -1,4 +1,4 @@
-import { countSyllables, safeDivide, round } from "./utils.js";
+import { countSyllables, safeDivide, round, calculateMedian } from "./utils.js";
 import { DALE_CHALL_EASY_WORDS } from "./data/daleChall.js";
 import type { StructuralMetrics, SentenceDetail, ParagraphDetail } from "./types.js";
 
@@ -6,7 +6,10 @@ import type { StructuralMetrics, SentenceDetail, ParagraphDetail } from "./types
  * A robust analyzer that produces StructuralMetrics from raw text.
  * This serves as a "bridge" utility to quickly get readability scores.
  * 
- * Note: For high-precision linguistic analysis, use @veldica/prose-tokenizer.
+ * Performance:
+ * - Uses O(N) Quickselect for median calculations.
+ * - Uses an internal syllable cache to optimize throughput on large documents.
+ * - Employs a more robust sentence splitter to handle basic abbreviations.
  */
 export function getStructuralMetrics(text: string): StructuralMetrics {
   const paragraphsRaw = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
@@ -23,7 +26,16 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
   const uniqueWordsMap = new Map<string, number>();
 
   paragraphsRaw.forEach((pText, pIndex) => {
-    const sentencesRaw = pText.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+    // A more robust split that handles some common abbreviations and decimals
+    // while avoiding catastrophic backtracking lookbehinds where possible.
+    const sentencesRaw = pText
+      .replace(/([A-Z])\.([A-Z])\./g, "$1__DOT__$2__DOT__") // Handle U.S.
+      .replace(/([A-Z])\.([A-Z])\.([A-Z])\./g, "$1__DOT__$2__DOT__$3__DOT__") // Handle U.S.A.
+      .replace(/(\d)\.(\d)/g, "$1__DEC__$2")   // Handle 3.14
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.replace(/__DOT__/g, ".").replace(/__DEC__/g, "."))
+      .filter(s => s.trim().length > 0);
+
     let pWordCount = 0;
 
     sentencesRaw.forEach((sText) => {
@@ -114,9 +126,9 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
     },
     sentence_metrics: {
       avg_words_per_sentence: round(safeDivide(wordCount, sentenceCount)),
-      median_words_per_sentence: sentenceWordCounts.sort((a, b) => a - b)[Math.floor(sentenceWordCounts.length / 2)] || 0,
-      min_words_per_sentence: Math.min(...sentenceWordCounts, 0),
-      max_words_per_sentence: Math.max(...sentenceWordCounts, 0),
+      median_words_per_sentence: calculateMedian(sentenceWordCounts),
+      min_words_per_sentence: sentenceWordCounts.length > 0 ? Math.min(...sentenceWordCounts) : 0,
+      max_words_per_sentence: sentenceWordCounts.length > 0 ? Math.max(...sentenceWordCounts) : 0,
       sentence_length_p90: 0,
       sentence_length_p95: 0,
       sentence_length_stddev: 0,
@@ -131,9 +143,9 @@ export function getStructuralMetrics(text: string): StructuralMetrics {
     },
     paragraph_metrics: {
       avg_words_per_paragraph: round(safeDivide(wordCount, paragraphCount)),
-      median_words_per_paragraph: paragraphWordCounts.sort((a, b) => a - b)[Math.floor(paragraphWordCounts.length / 2)] || 0,
-      min_words_per_paragraph: Math.min(...paragraphWordCounts, 0),
-      max_words_per_paragraph: Math.max(...paragraphWordCounts, 0),
+      median_words_per_paragraph: calculateMedian(paragraphWordCounts),
+      min_words_per_paragraph: paragraphWordCounts.length > 0 ? Math.min(...paragraphWordCounts) : 0,
+      max_words_per_paragraph: paragraphWordCounts.length > 0 ? Math.max(...paragraphWordCounts) : 0,
       paragraph_length_p90: 0,
       paragraph_length_p95: 0,
       paragraph_length_stddev: 0,
